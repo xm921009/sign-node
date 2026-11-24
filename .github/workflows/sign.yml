@@ -3,9 +3,10 @@ name: sign-run
 #   - 代码不进本仓：运行时 checkout public 的 xm921016/cron-relay 取 signin.py，
 #     改签到口径只改主仓一处（铁律：follower 不放代码）。
 #   - 号单实时从 worker /api/sign/assign 领，本仓零 CK 零号数据，SIGN_PASS 走 Secret。
-#   - 分片：dispatch 可传 i/n；买家规模 >250 前固定单片（i=0 n=1）。
-#   - schedule 暂放本仓（单片无 fanout 无重复风险）；将来 016 接管 dispatch 派片时
-#     必须删掉本 schedule，改由 master 统一派（防双跑）。
+#   - 2026-11-24 起动态派片（按买家数伸缩）：CF worker（cron-relay，dispatchSignBatch）
+#     北京 00:40 查 sign_users active 数 → 片数=ceil(active/350)（上限 12）→ 逐片
+#     workflow_dispatch 本 workflow（inputs i/n）。本仓 schedule 已删（防双跑，CF 唯一发令）；
+#     350/片 × 35s ≈ 3.5h，稳在单 job 300min 超时内，assign 每片 LIMIT 600 不会被触及。
 on:
   workflow_dispatch:
     inputs:
@@ -17,11 +18,11 @@ on:
         description: "总分片数"
         required: false
         default: "1"
-  schedule:
-    - cron: "40 16 * * *"   # 北京 00:40（错开 relay 00:20 高峰）
 
 concurrency:
-  group: sign-run
+  # 按片序号分组：n 片并行各跑各的（原固定 group=sign-run 会让多片串行排队，
+  # 8 片 × 3.5h 排不完直接超时）。schedule 已删，dispatch 必带 i；兜底值防手滑。
+  group: sign-run-${{ github.event.inputs.i || github.run_id }}
   cancel-in-progress: false
 
 jobs:
