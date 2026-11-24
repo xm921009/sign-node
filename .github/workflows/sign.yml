@@ -4,9 +4,10 @@ name: sign-run
 #     改签到口径只改主仓一处（铁律：follower 不放代码）。
 #   - 号单实时从 worker /api/sign/assign 领，本仓零 CK 零号数据，SIGN_PASS 走 Secret。
 #   - 2026-11-24 起动态派片（按买家数伸缩）：CF worker（cron-relay，dispatchSignBatch）
-#     北京 00:40 查 sign_users active 数 → 片数=ceil(active/350)（上限 12）→ 逐片
-#     workflow_dispatch 本 workflow（inputs i/n）。本仓 schedule 已删（防双跑，CF 唯一发令）；
+#     北京 00:40 查 sign_users active 数 → 片数=ceil(active/350)（上限 40，1.4 万买家）→
+#     逐片 workflow_dispatch 本 workflow（inputs i/n）。本仓 schedule 已删（防双跑，CF 唯一发令）；
 #     350/片 × 35s ≈ 3.5h，稳在单 job 300min 超时内，assign 每片 LIMIT 600 不会被触及。
+#     免费计划 public 仓并发 job 上限 20：超 20 片自动排队分波（1 万买家=29 片≈2 波 7h），无需处理。
 on:
   workflow_dispatch:
     inputs:
